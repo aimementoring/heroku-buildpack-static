@@ -17,18 +17,18 @@ http {
 
   server_tokens off;
 
-<% if logging['access'] %>
-  access_log logs/access.log;
-<% else %>
-  access_log off;
-<% end %>
+  <% if logging['access'] %>
+    access_log logs/access.log;
+  <% else %>
+    access_log off;
+  <% end %>
 
-<% if debug %>
-  error_log stderr debug;
-  rewrite_log on;
-<% else %>
-  error_log stderr <%= logging['error'] %>;
-<% end %>
+  <% if debug %>
+    error_log stderr debug;
+    rewrite_log on;
+  <% else %>
+    error_log stderr <%= logging['error'] %>;
+  <% end %>
 
   include mime.types;
   default_type application/octet-stream;
@@ -43,56 +43,55 @@ http {
     port_in_redirect off;
     keepalive_timeout 5;
     root <%= root %>;
-  <% if error_page %>
-    error_page 404 500 /<%= error_page %>;
-  <% end %>
-  <% if proxies.any? %>
-    resolver <%= resolver %>;
-  <% end %>
+    <% if error_page %>
+      error_page 404 500 /<%= error_page %>;
+    <% end %>
+    <% if proxies.any? %>
+      resolver <%= resolver %>;
+    <% end %>
 
-  location / {
-        proxy_set_header X-Prerender-Token fbmLcJAfxfYKjCi2oigj;
-        
-        set $prerender 0;
-        if ($http_user_agent ~* "googlebot|bingbot|yandex|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|Iframely|iframely|W3C_Validator") {
-            set $prerender 1;
-        }
-        if ($http_user_agent ~ "Prerender") {
-            set $prerender 0;
-        }
-        if ($args ~ "_escaped_fragment_") {
-            set $prerender 1;
-        }
-        if ($http_user_agent ~ "Prerender") {
-            set $prerender 0;
-        }
-        if ($uri ~* "\.(js|css|xml|less|png|jpg|jpeg|gif|pdf|doc|txt|ico|rss|zip|mp3|rar|exe|wmv|doc|avi|ppt|mpg|mpeg|tif|wav|mov|psd|ai|xls|mp4|m4a|swf|dat|dmg|iso|flv|m4v|torrent|ttf|woff|svg|eot)") {
-            set $prerender 0;
-        }
+  location ~ ^/ {
+    proxy_set_header X-Prerender-Token fbmLcJAfxfYKjCi2oigj;
+    
+    set $prerender 0;
+    if ($http_user_agent ~* "googlebot|bingbot|yandex|baiduspider|twitterbot|facebookexternalhit|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|Iframely|iframely|W3C_Validator") {
+      set $prerender 1;
+    }
+    if ($http_user_agent ~ "Prerender") {
+      set $prerender 0;
+    }
+    if ($args ~ "_escaped_fragment_") {
+      set $prerender 1;
+    }
+    if ($http_user_agent ~ "Prerender") {
+      set $prerender 0;
+    }
+    if ($uri ~* "\.(js|css|xml|less|png|jpg|jpeg|gif|pdf|doc|txt|ico|rss|zip|mp3|rar|exe|wmv|doc|avi|ppt|mpg|mpeg|tif|wav|mov|psd|ai|xls|mp4|m4a|swf|dat|dmg|iso|flv|m4v|torrent|ttf|woff|svg|eot)") {
+      set $prerender 0;
+    }
 
-        resolver 8.8.8.8;
- 
-        if ($prerender = 1) {
-            
-            #setting prerender as a variable forces DNS resolution since nginx caches IPs and doesnt play well with load balancing
-            set $prerender "service.prerender.io";
-            rewrite .* /https://$host$request_uri? break;
-            proxy_pass http://$prerender;
-        }
-        if ($prerender = 0) {
-            rewrite .* /200.html break;
-        }
+    resolver 8.8.8.8;
+
+    if ($prerender = 1) {
+      #setting prerender as a variable forces DNS resolution since nginx caches IPs and doesnt play well with load balancing
+      set $prerender "service.prerender.io";
+      rewrite .* /https://$host$request_uri? break;
+      proxy_pass http://$prerender;
+    }
+    if ($prerender = 0) {
+      rewrite .* /200.html break;
+    }
   }
 
-    location / {
-      mruby_post_read_handler /app/bin/config/lib/ngx_mruby/headers.rb cache;
-      mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
+  location / {
+    mruby_post_read_handler /app/bin/config/lib/ngx_mruby/headers.rb cache;
+    mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
     <% if clean_urls %>
       try_files $uri.html $uri $uri/ $fallback;
     <% else %>
       try_files $uri $uri/ $fallback;
     <% end %>
-    }
+  }
 
   <% if clean_urls %>
     location ~ \.html$ {
@@ -111,11 +110,11 @@ http {
       set $route <%= route %>;
       mruby_set $path /app/bin/config/lib/ngx_mruby/routes_path.rb cache;
       mruby_set $fallback /app/bin/config/lib/ngx_mruby/routes_fallback.rb cache;
-    <% if clean_urls %>
-      try_files $uri.html $uri $uri/ $path $fallback;
-    <% else %>
-      try_files $uri $path $fallback;
-    <% end %>
+      <% if clean_urls %>
+        try_files $uri.html $uri $uri/ $path $fallback;
+      <% else %>
+        try_files $uri $path $fallback;
+      <% end %>
     }
   <% end %>
 
@@ -144,6 +143,5 @@ http {
       return <%= hash['status'] || 301 %> <%= hash['url'] %>;
     }
   <% end %>
-
   }
 }
